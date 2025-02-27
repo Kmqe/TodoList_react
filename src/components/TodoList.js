@@ -15,36 +15,45 @@ import Todo from "./Todo";
 // OUTERS
 import { v4 as uuidv4 } from "uuid";
 
-import { useState } from "react";
-
-let initialTodos = [
-  {
-    id: uuidv4(),
-    title: "قراءة كتاب",
-    details: "Hello World , Thank you",
-    isCompleted: false,
-  },
-  {
-    id: uuidv4(),
-    title: "قراءة كتاب",
-    details: "Hello World , Thank you",
-    isCompleted: false,
-  },
-  {
-    id: uuidv4(),
-    title: "قراءة كتاب",
-    details: "Hello World , Thank you",
-    isCompleted: false,
-  },
-];
+import { TodosContext } from "../Contexts/todosContext";
+import { useContext, useState, useEffect } from "react";
 
 export default function TodoList() {
-  const [todos, setTodos] = useState(initialTodos);
-  const [titleInput, setTitleInput] = useState("");
+  const { todos, setTodos } = useContext(TodosContext);
 
-  const todosJsx = todos.map((t) => {
+  const [titleInput, setTitleInput] = useState("");
+  const [displayedTodosType, setDisplayedTodosType] = useState("all");
+
+  // filteration arrays
+  const completedTodos = todos.filter((t) => {
+    return t.isCompleted;
+  });
+
+  const notCompletedTodos = todos.filter((t) => {
+    return !t.isCompleted;
+  });
+
+  let todosToBeRendered = todos;
+
+  if (displayedTodosType === "completed") {
+    todosToBeRendered = completedTodos;
+  } else if (displayedTodosType === "non-completed") {
+    todosToBeRendered = notCompletedTodos;
+  }
+
+  const todosJsx = todosToBeRendered.map((t) => {
     return <Todo key={t.id} todo={t} />;
   });
+
+  useEffect(() => {
+    console.log("calling use effect");
+    const storageTodos = JSON.parse(localStorage.getItem("todos")) ?? [];
+    setTodos(storageTodos);
+  }, []);
+
+  function changeDisplayedType(e) {
+    setDisplayedTodosType(e.target.value);
+  }
 
   function handleAddClick() {
     let newTodo = {
@@ -53,13 +62,20 @@ export default function TodoList() {
       details: "",
       isCompleted: false,
     };
-    setTodos([...todos, newTodo]);
+
+    const updateTodos = [...todos, newTodo];
+
+    setTodos(updateTodos);
     setTitleInput("");
+    localStorage.setItem("todos", JSON.stringify(updateTodos));
   }
 
   return (
     <Container maxWidth="sm">
-      <Card sx={{ minWidth: 275 }}>
+      <Card
+        sx={{ minWidth: 275 }}
+        style={{ maxHeight: "80vh", overflow: "auto" }}
+      >
         <CardContent>
           <Typography variant="h2" style={{ fontWeight: "bold" }}>
             مهامي
@@ -69,14 +85,15 @@ export default function TodoList() {
           {/* FILTER BUTTONS */}
           <ToggleButtonGroup
             style={{ direction: "ltr", marginTop: "30px" }}
-            // value={alignment}
+            value={displayedTodosType}
             exclusive
-            // onChange={handleAlignment}
+            onChange={changeDisplayedType}
             aria-label="text alignment"
+            color="primary"
           >
-            <ToggleButton value="right">غير المنجز</ToggleButton>
-            <ToggleButton value="center">المنجز</ToggleButton>
-            <ToggleButton value="left">الكل</ToggleButton>
+            <ToggleButton value="non-completed">غير المنجز</ToggleButton>
+            <ToggleButton value="completed">المنجز</ToggleButton>
+            <ToggleButton value="all">الكل</ToggleButton>
           </ToggleButtonGroup>
           {/* ==== FILTER BUTTON ==== */}
 
@@ -114,6 +131,7 @@ export default function TodoList() {
                 style={{ width: "100%", height: "100%" }}
                 variant="contained"
                 onClick={() => handleAddClick()}
+                disabled={titleInput.length <= 0}
               >
                 اضافة
               </Button>
